@@ -1,5 +1,5 @@
 # Copyright (c) 2015-2016 Anish Athalye. Released under GPLv3.
-
+import os
 import vgg
 
 import tensorflow as tf
@@ -19,7 +19,8 @@ except NameError:
 
 def stylize(network, initial, content, styles, iterations,
         content_weight, style_weight, style_blend_weights, tv_weight,
-        learning_rate, print_iterations=None, checkpoint_iterations=None):
+        learning_rate, print_iterations=None, checkpoint_iterations=None,
+        savestate_iterations=None, savestate_path=None, savestate_restore_file=None):
     """
     Stylize images.
 
@@ -109,14 +110,31 @@ def stylize(network, initial, content, styles, iterations,
         # optimization
         best_loss = float('inf')
         best = None
+
+        saver = None
+
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
+
+            # lazy initilaization
+            print("... Loading training saver ...")
+            saver = tf.train.Saver()
+
+            if savestate_restore_file is not None and saver:
+                print('Restoring saved checkpoint from `%s`' % savestate_restore_file)
+                saver.restore(sess, savestate_restore_file)
+
             for i in range(iterations):
                 last_step = (i == iterations - 1)
                 print_progress(i, last=last_step)
                 train_step.run()
 
-                if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                if savestate_path and i>0 and ((savestate_iterations and i % savestate_iterations == 0) or last_step):
+                    savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
+                    print('Saving model to `%s`' % savefilename)
+                    saver.save(sess, savefilename, iterations);
+
+                if (checkpoint_iterations and i>0 and i % checkpoint_iterations == 0) or last_step:
                     this_loss = loss.eval()
                     if this_loss < best_loss:
                         best_loss = this_loss

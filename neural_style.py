@@ -1,6 +1,7 @@
 # Copyright (c) 2015-2016 Anish Athalye. Released under GPLv3.
 
 import os
+import time
 
 import numpy as np
 import scipy.misc
@@ -72,17 +73,27 @@ def build_parser():
     parser.add_argument('--checkpoint-iterations', type=int,
             dest='checkpoint_iterations', help='checkpoint frequency',
             metavar='CHECKPOINT_ITERATIONS')
+    parser.add_argument('--savestate-iterations', type=int,
+                        dest='savestate_iterations', help='savestate frequency',
+                        metavar='savestate_iterations')
+    parser.add_argument('--savestate-path',
+            dest='savestate_path', help='Saves current internal state here. overwritten each save',
+            metavar='SAVESTATE_PATH')
+    parser.add_argument('--savestate-restore-file',
+            dest='savestate_restore_file', help='loads saved checkpoint state.',
+            metavar='CHECKPOINT_RESTORE_FILE')
     return parser
 
 
 def main():
+    start_time = last_save = time.time()
     parser = build_parser()
     options = parser.parse_args()
 
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_image = imread(options.content)
+    content_image = imread(os.path.abspath(options.content))
     style_images = [imread(style) for style in options.styles]
 
     width = options.width
@@ -115,6 +126,24 @@ def main():
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
 
+    print('checkpoint_iterations=%d' % options.checkpoint_iterations)
+
+    savestate_path = options.savestate_path
+    if savestate_path:
+        if (not os.path.isdir(os.path.dirname(os.path.abspath(options.savestate_path)))):
+            parser.error('Path not found for --savestate-path %s' % options.savestate_path)
+        else:
+            if not options.savestate_iterations:
+                parser.error('--savestate-path requires you set --savestate-iterations to a number')
+            savestate_path = os.path.abspath(options.savestate_path)
+
+    savestate_restore_file = None
+    if options.savestate_restore_file:
+        if (not os.path.isfile(os.path.abspath(options.savestate_restore_file))):
+            parser.error('Path not found for savestate_restore_file %s' % options.savestate_restore_file)
+        else:
+            savestate_restore_file = os.path.abspath(options.savestate_restore_file)
+
     for iteration, image in stylize(
         network=options.network,
         initial=initial,
@@ -127,16 +156,28 @@ def main():
         tv_weight=options.tv_weight,
         learning_rate=options.learning_rate,
         print_iterations=options.print_iterations,
-        checkpoint_iterations=options.checkpoint_iterations
+        checkpoint_iterations=options.checkpoint_iterations,
+        savestate_iterations=options.savestate_iterations,
+        savestate_path=savestate_path,
+        savestate_restore_file=savestate_restore_file
     ):
         output_file = None
         if iteration is not None:
             if options.checkpoint_output:
-                output_file = options.checkpoint_output % iteration
+                output_file = options.checkpoint_output % ('%04d' % iteration)
         else:
-            output_file = options.output
+            output_file = os.path.abspath(options.output)
         if output_file:
             imsave(output_file, image)
+            print('Image saved as: `%s`' % output_file)
+            m, s = divmod((time.time() - last_save), 60)
+            h, m = divmod(m, 60)
+            print('Step Duration %02dm%02ds' % (m, s))
+
+            m, s = divmod((time.time() - start_time), 60)
+            h, m = divmod(m, 60)
+            print('Total Duration %02dh%02dm%02ds' % (h,m,s))
+            last_save = time.time()
 
 
 def imread(path):
