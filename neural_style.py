@@ -33,12 +33,18 @@ def build_parser():
     parser.add_argument('--output',
             dest='output', help='output path',
             metavar='OUTPUT', required=True)
-    parser.add_argument('--checkpoint-output',
-            dest='checkpoint_output', help='checkpoint output format',
-            metavar='OUTPUT')
     parser.add_argument('--iterations', type=int,
             dest='iterations', help='iterations (default %(default)s)',
             metavar='ITERATIONS', default=ITERATIONS)
+    parser.add_argument('--print-iterations', type=int,
+            dest='print_iterations', help='statistics printing frequency',
+            metavar='PRINT_ITERATIONS')
+    parser.add_argument('--checkpoint-output',
+            dest='checkpoint_output', help='checkpoint output format, e.g. output%%s.jpg',
+            metavar='OUTPUT')
+    parser.add_argument('--checkpoint-iterations', type=int,
+            dest='checkpoint_iterations', help='checkpoint frequency',
+            metavar='CHECKPOINT_ITERATIONS')
     parser.add_argument('--width', type=int,
             dest='width', help='output width',
             metavar='WIDTH')
@@ -67,6 +73,7 @@ def build_parser():
     parser.add_argument('--initial',
             dest='initial', help='initial image',
             metavar='INITIAL')
+<<<<<<< HEAD
     parser.add_argument('--print-iterations', type=int,
             dest='print_iterations', help='statistics printing frequency',
             metavar='PRINT_ITERATIONS')
@@ -82,6 +89,8 @@ def build_parser():
     parser.add_argument('--savestate-restore-file',
             dest='savestate_restore_file', help='loads saved checkpoint state.',
             metavar='CHECKPOINT_RESTORE_FILE')
+=======
+>>>>>>> refs/remotes/anishathalye/master
     return parser
 
 
