@@ -73,13 +73,6 @@ def build_parser():
     parser.add_argument('--initial',
             dest='initial', help='initial image',
             metavar='INITIAL')
-<<<<<<< HEAD
-    parser.add_argument('--print-iterations', type=int,
-            dest='print_iterations', help='statistics printing frequency',
-            metavar='PRINT_ITERATIONS')
-    parser.add_argument('--checkpoint-iterations', type=int,
-            dest='checkpoint_iterations', help='checkpoint frequency',
-            metavar='CHECKPOINT_ITERATIONS')
     parser.add_argument('--savestate-iterations', type=int,
                         dest='savestate_iterations', help='savestate frequency',
                         metavar='savestate_iterations')
@@ -89,8 +82,7 @@ def build_parser():
     parser.add_argument('--savestate-restore-file',
             dest='savestate_restore_file', help='loads saved checkpoint state.',
             metavar='CHECKPOINT_RESTORE_FILE')
-=======
->>>>>>> refs/remotes/anishathalye/master
+
     return parser
 
 
