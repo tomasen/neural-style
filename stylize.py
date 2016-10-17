@@ -17,7 +17,7 @@ except NameError:
     from functools import reduce
 
 
-def stylize(network, initial, content, styles, iterations,
+def stylize(network, initial, content, styles, optimizer, iterations,
         content_weight, style_weight, style_blend_weights, tv_weight,
         learning_rate, print_iterations=None, checkpoint_iterations=None,
         savestate_iterations=None, savestate_path=None, savestate_restore_file=None):
@@ -97,7 +97,12 @@ def stylize(network, initial, content, styles, iterations,
         loss = content_loss + style_loss + tv_loss
 
         # optimizer setup
-        train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+
+        def train_step(session = None ,iterations = 0):
+            if optimizer == 'adam':
+                tf.train.AdamOptimizer(learning_rate).minimize(loss)
+            elif optimizer == 'lbfgs':
+                tf.contrib.opt.ScipyOptimizerInterface(loss, method='L-BFGS-B', options={'maxiter': iterations}).minimize(session)
 
         def print_progress(i, last=False):
             stderr.write('Iteration %d/%d\n' % (i + 1, iterations))
@@ -124,25 +129,44 @@ def stylize(network, initial, content, styles, iterations,
                 print('Restoring saved checkpoint from `%s`' % savestate_restore_file)
                 saver.restore(sess, savestate_restore_file)
 
-            for i in range(iterations):
-                last_step = (i == iterations - 1)
-                print_progress(i, last=last_step)
-                train_step.run()
+            if optimizer == 'adam':
+                for i in range(iterations):
+                    last_step = (i == iterations - 1)
+                    print_progress(i, last=last_step)
+                    train_step()
 
-                if savestate_path and i>0 and ((savestate_iterations and i % savestate_iterations == 0) or last_step):
-                    savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
-                    print('Saving model to `%s`' % savefilename)
-                    saver.save(sess, savefilename, iterations);
+		    if savestate_path and i>0 and ((savestate_iterations and i % savestate_iterations == 0) or last_step):
+		        savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
+		        print('Saving model to `%s`' % savefilename)
+		        saver.save(sess, savefilename, iterations);
 
-                if (checkpoint_iterations and i>0 and i % checkpoint_iterations == 0) or last_step:
+                    if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                        this_loss = loss.eval()
+                        if this_loss < best_loss:
+                            best_loss = this_loss
+                            best = image.eval()
+                        yield (
+                            (None if last_step else i),
+                            vgg.unprocess(best.reshape(shape[1:]), mean_pixel)
+                        )
+            elif optimizer == 'lbfgs':
+                if not checkpoint_iterations:
+                    checkpoint_iterations = iterations
+                unprocessed_iterations = iterations
+                while unprocessed_iterations > 0:
+                    last_step = (unprocessed_iterations <= checkpoint_iterations)
+                    print_progress(iterations - unprocessed_iterations, last=last_step)
+                    train_step(sess, min(unprocessed_iterations, checkpoint_iterations))
                     this_loss = loss.eval()
                     if this_loss < best_loss:
                         best_loss = this_loss
                         best = image.eval()
                     yield (
-                        (None if last_step else i),
+                        (None if last_step else iterations - unprocessed_iterations),
                         vgg.unprocess(best.reshape(shape[1:]), mean_pixel)
                     )
+                    unprocessed_iterations -= checkpoint_iterations
+                print_progress(iterations - 1, last=True)
 
 
 def _tensor_size(tensor):

@@ -6,8 +6,6 @@ import time
 import numpy as np
 import scipy.misc
 
-from stylize import stylize
-
 import math
 from argparse import ArgumentParser
 
@@ -18,6 +16,7 @@ TV_WEIGHT = 1e2
 LEARNING_RATE = 1e1
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
+OPTIMIZER = 'lbfgs'
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 
 
@@ -33,6 +32,9 @@ def build_parser():
     parser.add_argument('--output',
             dest='output', help='output path',
             metavar='OUTPUT', required=True)
+    parser.add_argument('--optimizer',
+            dest='optimizer', help='lbfgs or adam (default %(default)s)',
+            metavar='OPTIMIZER', default=OPTIMIZER)
     parser.add_argument('--iterations', type=int,
             dest='iterations', help='iterations (default %(default)s)',
             metavar='ITERATIONS', default=ITERATIONS)
@@ -74,8 +76,8 @@ def build_parser():
             dest='initial', help='initial image',
             metavar='INITIAL')
     parser.add_argument('--savestate-iterations', type=int,
-                        dest='savestate_iterations', help='savestate frequency',
-                        metavar='savestate_iterations')
+            dest='savestate_iterations', help='savestate frequency',
+            metavar='savestate_iterations')
     parser.add_argument('--savestate-path',
             dest='savestate_path', help='Saves current internal state here. overwritten each save',
             metavar='SAVESTATE_PATH')
@@ -96,6 +98,7 @@ def main():
 
     content_image = imread(os.path.abspath(options.content))
     style_images = [imread(style) for style in options.styles]
+    optimizer = options.optimizer
 
     width = options.width
     if width is not None:
@@ -145,11 +148,14 @@ def main():
         else:
             savestate_restore_file = os.path.abspath(options.savestate_restore_file)
 
+    from stylize import stylize
+
     for iteration, image in stylize(
         network=options.network,
         initial=initial,
         content=content_image,
         styles=style_images,
+        optimizer=optimizer,
         iterations=options.iterations,
         content_weight=options.content_weight,
         style_weight=options.style_weight,
