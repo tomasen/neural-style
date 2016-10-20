@@ -135,10 +135,10 @@ def stylize(network, initial, content, styles, optimizer, iterations,
                     print_progress(i, last=last_step)
                     train_step()
 
-		    if savestate_path and i>0 and ((savestate_iterations and i % savestate_iterations == 0) or last_step):
-		        savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
-		        print('Saving model to `%s`' % savefilename)
-		        saver.save(sess, savefilename, iterations);
+                    if savestate_path and i>0 and ((savestate_iterations and i % savestate_iterations == 0) or last_step):
+                        savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
+                        print('Saving model to `%s`' % savefilename)
+                        saver.save(sess, savefilename, iterations);
 
                     if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                         this_loss = loss.eval()
@@ -155,6 +155,12 @@ def stylize(network, initial, content, styles, optimizer, iterations,
                 unprocessed_iterations = iterations
                 while unprocessed_iterations > 0:
                     last_step = (unprocessed_iterations <= checkpoint_iterations)
+
+                    if savestate_path and ((savestate_iterations and unprocessed_iterations % savestate_iterations == 0) or last_step):
+                        savefilename = os.path.join(savestate_path, 'save_model.ckpt') # could inc this.
+                        print('Saving model to `%s`' % savefilename)
+                        saver.save(sess, savefilename, iterations);
+
                     print_progress(iterations - unprocessed_iterations, last=last_step)
                     train_step(sess, min(unprocessed_iterations, checkpoint_iterations))
                     this_loss = loss.eval()
